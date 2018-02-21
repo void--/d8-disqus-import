@@ -3,4 +3,5 @@ description: 'Imports Disqus comments using migrate API'
 type: module
 core: 8.x
 dependencies:
-  - drupal:migrate_plus
+  - migrate_plus:migrate_plus
+  - migrate_tools:migrate_tools
