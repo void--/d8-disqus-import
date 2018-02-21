@@ -1,5 +1,25 @@
 <?php
 
+use Drupal\migrate\Plugin\MigrationInterface;
+use Drupal\migrate_tools\MigrateExecutable;
+
 function _disqus_import_run() {
-  
+
+  /** @var \Drupal\migrate\Plugin\MigrationInterface $migration */
+  $migration = \Drupal::service('plugin.manager.migration');
+  $migration = $migration->createInstance('disqus');
+
+  // Reset status if needed.
+  if ($migration->getStatus() != MigrationInterface::STATUS_IDLE) {
+    $migration->setStatus(MigrationInterface::STATUS_IDLE);
+  }
+
+  $migration->setTrackLastImported(TRUE);
+
+  $message = function_exists('drush_verify_cli') && drush_verify_cli() ?
+    new \Drupal\migrate_tools\DrushLogMigrateMessage() :
+    new \Drupal\migrate\MigrateMessage();
+  $executable = new MigrateExecutable($migration, $message);
+  $executable->import();
+  return $executable->getFailedCount();
 }
