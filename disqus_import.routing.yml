@@ -1,0 +1,7 @@
+disqus_import.import_form:
+  path: '/admin/content/disqus/import'
+  defaults:
+    _form: '\Drupal\disqus_import\Form\DisqusImportForm'
+    _title: 'Disqus Import'
+  requirements:
+    _role: 'authenticated'

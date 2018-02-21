@@ -1,0 +1,46 @@
+id: disqus
+label: disqus JSON import
+source:
+  plugin: url
+  data_fetcher_plugin: disqus_import_file
+  data_parser_plugin: json
+  # The data_parser normally limits the fields passed on to the source plugin
+  # to fields configured to be used as part of the migration. To support more
+  # dynamic migrations, the JSON data parser supports including the original
+  # data for the current row. Simply include the 'include_raw_data' flag set
+  # to `true` to enable this. This option is disabled by default to minimize
+  # memory footprint for migrations that do not need this capability.
+  # include_raw_data: true
+
+  # An xpath-like selector corresponding to the items to be imported.
+  item_selector: ''
+  # Under 'fields', we list the data items to be imported. The first level keys
+  # are the source field names we want to populate (the names to be used as
+  # sources in the process configuration below). For each field we're importing,
+  # we provide a label (optional - this is for display in migration tools) and
+  # an xpath for retrieving that value. It's important to note that this xpath
+  # is relative to the elements retrieved by item_selector.
+  fields:
+    -
+      name: id
+      label: Id
+      selector: id
+
+  # Under 'ids', we identify source fields populated above which will uniquely
+  # identify each imported item. The 'type' makes sure the migration map table
+  # uses the proper schema type for stored the IDs.
+  ids:
+    id:
+      type: string
+process:
+  type:
+    plugin: default_value
+    default_value: comment
+  title: title
+destination:
+  plugin: entity:comment
+dependencies:
+  enforced:
+    module:
+      - migrate
+      - migrate_plus
