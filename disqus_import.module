@@ -5,6 +5,8 @@ use Drupal\migrate_tools\MigrateExecutable;
 
 function _disqus_import_run() {
 
+  _parse_disqus_xml();
+
   /** @var \Drupal\migrate\Plugin\MigrationInterface $migration */
   $migration = \Drupal::service('plugin.manager.migration');
   $migration = $migration->createInstance('disqus');
@@ -22,4 +24,37 @@ function _disqus_import_run() {
   $executable = new MigrateExecutable($migration, $message);
   $executable->import();
   return $executable->getFailedCount();
+}
+
+function _parse_disqus_xml() {
+  $disqus_data = file_get_contents(drupal_get_path('module', 'disqus_import') . "/disqus_data.xml");
+  $disqus_data = simplexml_load_string($disqus_data);
+
+  $thread_lookup = [];
+  foreach ($disqus_data->thread as $thread) {
+    $thread_lookup[(string) $thread->attributes('dsq', true)->id] = $thread;
+  }
+
+  $disqus_data_array = [];
+
+  foreach ($disqus_data->post as $post) {
+    $thread = $thread_lookup[(string) $post->thread->attributes('dsq', true)->id];
+
+    $post->addChild('thread_id',          $thread->id);
+    $post->addChild('thread_title',       $thread->title);
+    $post->addChild('thread_link',        $thread->link);
+    $post->addChild('thread_is_closed',   $thread->isClosed);
+    $post->addChild('thread_is_deleted',  $thread->isDeleted);
+
+    $temp =             (array) $post;
+    $temp['author'] =   (array) $post->author;
+    $temp['message'] =  (string) $post->message;
+
+    unset($temp['id']);
+    unset($temp['thread']);
+
+    $disqus_data_array[] = $temp;
+  }
+
+  file_put_contents(file_directory_temp() . "/disqus_data.json", json_encode($disqus_data_array));
 }

@@ -18,7 +18,7 @@ class DisqusImportFile extends File {
    */
   public function getResponse($url) {
     // $url is unused.
-    $disqus_dump_path = drupal_get_path('module', 'disqus_import') . '/disqus_data.json';
+    $disqus_dump_path = file_directory_temp() . '/disqus_data.json';
     $response = file_get_contents($disqus_dump_path);
     if ($response === FALSE) {
       throw new MigrateException('file parser plugin: could not retrieve data from ' . $disqus_dump_path);
