@@ -1,5 +1,6 @@
-id: disqus
-label: disqus JSON import
+id: disqus_comments
+label: disqus JSON comment import
+
 source:
   plugin: url
   data_fetcher_plugin: disqus_import_file
@@ -23,8 +24,35 @@ source:
   fields:
     -
       name: id
-      label: Id
       selector: id
+    -
+      name: message
+      selector: message
+    -
+      name: created
+      selector: createdAt
+    -
+      name: isDeleted
+      selector: isDeleted
+    -
+      name: isSpam
+      selector: isSpam
+    -
+      name: email
+      selector: author/email
+    -
+      name: name
+      selector: author/name
+    -
+      name: host
+      selector: ipAddress
+    -
+      name: parent
+      selector: parent
+    -
+      name: thread_id
+      selector: thread_id
+
 
   # Under 'ids', we identify source fields populated above which will uniquely
   # identify each imported item. The 'type' makes sure the migration map table
@@ -32,13 +60,72 @@ source:
   ids:
     id:
       type: string
+
 process:
-  type:
+  entity_id:
+    -
+      plugin: explode
+      source: thread_id
+      delimiter: /
+    -
+      plugin: extract
+      index:
+        - 1
+
+  disqus_id: id
+
+  status:
+    plugin: callback
+    callable:
+      - Drupal\disqus_import\DisqusImportMigrateProcess
+      - getStatus
+    source:
+      - isDeleted
+      - isSpam
+
+  subject:
+    plugin: default_value
+    default_value: ''
+
+  comment_type:
     plugin: default_value
     default_value: comment
-  title: title
+
+  entity_type:
+    plugin: default_value
+    default_value: node
+
+  field_name:
+    plugin: default_value
+    default_value: comment
+
+  uid:
+    plugin: callback
+    callable:
+      - Drupal\disqus_import\DisqusImportMigrateProcess
+      - getUidFromEmail
+    source: email
+
+  name: name
+  mail: email
+
+  hostname: host
+  created: created
+  pid:
+    plugin: callback
+    callable:
+      - Drupal\disqus_import\DisqusImportMigrateProcess
+      - getPid
+    source: parent
+
+  'comment_body/value': message
+  'comment_body/format':
+    plugin: default_value
+    default_value: basic_html
+
 destination:
-  plugin: entity:comment
+  plugin: 'entity:comment'
+
 dependencies:
   enforced:
     module:

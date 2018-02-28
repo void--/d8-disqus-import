@@ -1,15 +1,24 @@
 <?php
 
+use Drupal\comment\Plugin\Field\FieldType\CommentItemInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\field\Entity\FieldConfig;
+use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\migrate\Plugin\MigrationInterface;
 use Drupal\migrate_tools\MigrateExecutable;
+use Drupal\node\Entity\Node;
 
 function _disqus_import_run() {
 
+  \Drupal::keyValue('disqus_import')->set('importing', true);
+
   _parse_disqus_xml();
+
+  _add_comment_field_to_nodes();
 
   /** @var \Drupal\migrate\Plugin\MigrationInterface $migration */
   $migration = \Drupal::service('plugin.manager.migration');
-  $migration = $migration->createInstance('disqus');
+  $migration = $migration->createInstance('disqus_comments');
 
   // Reset status if needed.
   if ($migration->getStatus() != MigrationInterface::STATUS_IDLE) {
@@ -23,6 +32,9 @@ function _disqus_import_run() {
     new \Drupal\migrate\MigrateMessage();
   $executable = new MigrateExecutable($migration, $message);
   $executable->import();
+
+  \Drupal::keyValue('disqus_import')->deleteAll();
+
   return $executable->getFailedCount();
 }
 
@@ -35,26 +47,71 @@ function _parse_disqus_xml() {
     $thread_lookup[(string) $thread->attributes('dsq', true)->id] = $thread;
   }
 
+  file_put_contents(file_directory_temp() . "/disqus_thread_data.json", json_encode($thread_lookup));
+
   $disqus_data_array = [];
 
   foreach ($disqus_data->post as $post) {
     $thread = $thread_lookup[(string) $post->thread->attributes('dsq', true)->id];
 
     $post->addChild('thread_id',          $thread->id);
-    $post->addChild('thread_title',       $thread->title);
-    $post->addChild('thread_link',        $thread->link);
-    $post->addChild('thread_is_closed',   $thread->isClosed);
-    $post->addChild('thread_is_deleted',  $thread->isDeleted);
 
     $temp =             (array) $post;
+    $temp['id'] =       (string) $post->attributes('dsq', true)->id;
+    $temp['parent'] =   (string) $post->parent->attributes('dsq', true)->id;
     $temp['author'] =   (array) $post->author;
     $temp['message'] =  (string) $post->message;
 
-    unset($temp['id']);
     unset($temp['thread']);
 
     $disqus_data_array[] = $temp;
   }
 
-  file_put_contents(file_directory_temp() . "/disqus_data.json", json_encode($disqus_data_array));
+  file_put_contents(file_directory_temp() . "/disqus_comment_data.json", json_encode($disqus_data_array));
+}
+
+function _add_comment_field_to_nodes() {
+  // enable comment field on blog post nodes
+  $field_storage = FieldStorageConfig::loadByName('node', 'comment');
+  $field = FieldConfig::loadByName('node', 'blog_post', 'comment');
+  if (empty($field)) {
+    $field = entity_create('field_config', array(
+      'field_storage' => $field_storage,
+      'bundle' => 'blog_post',
+      'label' => 'Comments',
+    ));
+    $field->save();
+  }
+
+  $thread_data = json_decode(file_get_contents(file_directory_temp() . "/disqus_thread_data.json"));
+
+  drupal_set_message("Nodes needing manual QA:");
+
+  foreach ($thread_data as $thread) {
+    $nid = explode('/', $thread->id)[1];
+    $node = Node::load($nid);
+
+    if ($node) {
+      if ($node->title->value !== $thread->title) {
+        if ($node->type->target_id !== 'blog_post') continue;
+
+        similar_text($node->title->value, $thread->title, $percent);
+        if ($percent < 60) {
+          drupal_set_message("node/{$nid} -- {$node->title->value} !== {$thread->title}");
+        }
+      }
+
+      if ($thread->isDeleted === 'true') {
+        $node->comment->status = CommentItemInterface::HIDDEN;
+      }
+      else if ($thread->isClosed === 'true') {
+        $node->comment->status = CommentItemInterface::CLOSED;
+      }
+      else {
+        $node->comment->status = CommentItemInterface::OPEN;
+      }
+
+      $node->save();
+    }
+  }
 }
