@@ -4,15 +4,18 @@ namespace Drupal\disqus_import;
 
 class DisqusImportMigrateProcess {
 
-  public function getStatus($isDeleted, $isSpam) {
+  public static function getStatus($args) {
+    $isDeleted = $args[0];
+    $isSpam =    $args[1];
+
+    return (!$isDeleted && !$isSpam) ? 1 : 0;
+  }
+
+  public static function getPid($parent) {
     $test = 'blah';
   }
 
-  public function getPid($parent) {
-    $test = 'blah';
-  }
-
-  public function getUidFromEmail($email) {
+  public static function getUidFromEmail($email) {
     $test = 'blah';
   }
 }

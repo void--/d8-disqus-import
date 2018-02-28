@@ -1,5 +1,7 @@
 <?php
 
+define('COMMENT_BUNDLE', 'blog_post');
+
 use Drupal\comment\Plugin\Field\FieldType\CommentItemInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\field\Entity\FieldConfig;
@@ -71,13 +73,13 @@ function _parse_disqus_xml() {
 }
 
 function _add_comment_field_to_nodes() {
-  // enable comment field on blog post nodes
+  // enable comment field
   $field_storage = FieldStorageConfig::loadByName('node', 'comment');
-  $field = FieldConfig::loadByName('node', 'blog_post', 'comment');
+  $field = FieldConfig::loadByName('node', COMMENT_BUNDLE, 'comment');
   if (empty($field)) {
     $field = entity_create('field_config', array(
       'field_storage' => $field_storage,
-      'bundle' => 'blog_post',
+      'bundle' => COMMENT_BUNDLE,
       'label' => 'Comments',
     ));
     $field->save();
@@ -93,7 +95,7 @@ function _add_comment_field_to_nodes() {
 
     if ($node) {
       if ($node->title->value !== $thread->title) {
-        if ($node->type->target_id !== 'blog_post') continue;
+        if ($node->type->target_id !== COMMENT_BUNDLE) continue;
 
         similar_text($node->title->value, $thread->title, $percent);
         if ($percent < 60) {
