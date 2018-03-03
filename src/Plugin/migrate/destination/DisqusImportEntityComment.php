@@ -14,7 +14,7 @@ class DisqusImportEntityComment extends EntityComment {
 
   /**
    * Saves the entity, but also, save a mapping of the disqus id to comment id to be used
-   * later for mapping comment pid.
+   * later for mapping comment pid. @see \Drupal\disqus_import\DisqusImportMigrateProcess::getPid
    *
    * @param \Drupal\Core\Entity\ContentEntityInterface $entity
    *   The content entity.
