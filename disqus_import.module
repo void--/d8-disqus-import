@@ -66,7 +66,13 @@ function _parse_disqus_xml() {
 
     unset($temp['thread']);
 
-    $disqus_data_array[] = $temp;
+    // Make sure the node exists
+    $nid = explode('/', $thread->id)[1];
+    $values = \Drupal::entityQuery('node')->condition('nid', $nid)->execute();
+
+    if (!empty($values)) {
+      $disqus_data_array[] = $temp;
+    }
   }
 
   file_put_contents(file_directory_temp() . "/disqus_comment_data.json", json_encode($disqus_data_array));
