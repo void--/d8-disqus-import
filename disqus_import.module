@@ -60,7 +60,7 @@ function _parse_disqus_xml() {
 
     $temp =             (array) $post;
     $temp['id'] =       (string) $post->attributes('dsq', true)->id;
-    $temp['parent'] =   (string) $post->parent->attributes('dsq', true)->id;
+    $temp['parent'] =   isset($post->parent->attributes('dsq', true)->id) ? (string) $post->parent->attributes('dsq', true)->id : null;
     $temp['author'] =   (array) $post->author;
     $temp['message'] =  (string) $post->message;
 
@@ -110,6 +110,9 @@ function _add_comment_field_to_nodes() {
       }
 
       if ($thread->isDeleted === 'true') {
+        $node->comment->status = CommentItemInterface::HIDDEN;
+      }
+      else if ($node->field_disqus_comment->status != '1') {
         $node->comment->status = CommentItemInterface::HIDDEN;
       }
       else if ($thread->isClosed === 'true') {
